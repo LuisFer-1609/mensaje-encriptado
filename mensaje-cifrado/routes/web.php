@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\EncryptionController; /*Libreria para RSA*/
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -34,5 +35,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
-
+/*Ruta para mandar la incriptacion*/
+Route::get('/encriptar', [EncryptionController::class, 'index']);
+Route::post('/desencriptar', [EncryptionController::class, 'desencriptar']);
 require __DIR__.'/auth.php';
