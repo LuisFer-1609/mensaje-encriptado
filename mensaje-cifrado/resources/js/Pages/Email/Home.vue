@@ -19,7 +19,7 @@
                 </template>
             </el-dropdown>
         </header>
-        <section class="h-full flex flex-row">
+        <section class="flex-1 h-full flex flex-row">
             <aside class="shrink-0 pe-3">
                 <div class="p-1 mb-5">
                     <button class="flex items-center gap-2 bg-blue-200 rounded-xl p-5 font-semibold" @click="openCreateEmail">
