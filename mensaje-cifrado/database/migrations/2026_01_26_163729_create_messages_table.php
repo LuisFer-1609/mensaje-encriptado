@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      *
@@ -13,17 +12,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        
         Schema::create('messages', function (Blueprint $table) {
             $table->id();
             $table->foreignId('sender_id')->constrained('users')->onDelete('cascade');
             $table->foreignId('recipient_id')->constrained('users')->onDelete('cascade');
-            // Mensaje
             $table->string('subject');
-            // Mensaje encriptado
-            $table->longText('body'); 
-            // Estatus ('sent', 'read')
-            $table->boolean('status')->default(0);
+            $table->longText('body');
+            // Estatus (ej: 'sent', 'delivered', 'read')
+            $table->string('status')->default('sent');
             $table->softDeletes();
             $table->timestamps();
         });
