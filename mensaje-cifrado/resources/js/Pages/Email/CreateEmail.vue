@@ -122,14 +122,15 @@ export default {
              this.errorMessage = null;
              console.group("🚀 Enviando Correo (Simulación RSA)");
              
-             const simulacionPublicKey = `-----BEGIN RSA PUBLIC KEY-----
-            MIIBCgKCAQEAw43zpeVY1OFxq7SwZ3oQROQ9bpxXFwOJPB4UIOmzRPV+MvLCXAK5
-            SsHkEvRsaBonCBkvp9PpZod2VagYbxR9e66QDYK9rf3GdXiWv+YDUq74XuH5inXs
-            g0KBufRPMvIDrqHB2dp195M96iaKMvFt/0+AjCWUJrQLhvv1DAwZydwp3xyKT/Ib
-            ByWsodPI315U4GGPvRtc7//nS7SBdCI17gMXg2vEEGmZafzPG30uvA/YLF6HUjXX
-            AvHN36d6kBySz7IkCaZzzct4TrPa7FjrizL5OZfQwn2/bcMCg9+J0OaRFaferEpe
-            xD+bws66T+8pPSAx5Vte7FtHAjssWRUd5wIDAQAB
-            -----END RSA PUBLIC KEY-----`;
+             const simulacionPublicKey = `-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAu1xvPFLxcAsOjB55aRYP
+h7S2kVAtX5baTYLmyJuVwgV40HJrXLfuGvQMxdvtlKrKbfrxd6opmI77Yrb4LYtq
+hrogQm1dBKLtPhO/OhFhkjmTHTNsa0nTSA3E6Poqv/6HOIJmKEFkddFHcr4D8125
+aMDTqGOxJsCbQwl8e5EY8AznAyyFdCBz3OjgxLLq/rgs3EsFOpRj9UsFGhDlxKDS
+MhyOeRZHlbuBtda+1agWCfNKiWi+9cCEw2NGh0Js44K6hz383+AhJVLK6DoyTodP
+7EE+aUVv+bCguTAHLREJa8LlZZn1FS0U+r+m5+xOdzAIy7NhHj1mlTqzq7ENcvD3
+wQIDAQAB
+-----END PUBLIC KEY-----`;
 
             console.log("Mensaje Original:", this.form.message);
 

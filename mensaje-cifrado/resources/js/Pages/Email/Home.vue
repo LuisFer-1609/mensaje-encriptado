@@ -186,8 +186,7 @@ import { ElNotification } from 'element-plus';
             onMessageSent() {
                 if (this.currentFolder === 'sent') {
                     this.fetchEmails();
-                } else {
-        
+                }
             }    
         }
     }
