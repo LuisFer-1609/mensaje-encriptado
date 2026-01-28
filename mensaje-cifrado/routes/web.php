@@ -40,6 +40,6 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 /*Ruta para mandar la incriptacion*/
-Route::get('/encriptar', [EncryptionController::class, 'index']);
+Route::get('/encriptar', [EncryptionController::class, 'createKey']);
 Route::post('/desencriptar', [EncryptionController::class, 'desencriptar']);
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';
