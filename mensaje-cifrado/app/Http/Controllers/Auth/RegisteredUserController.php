@@ -36,13 +36,13 @@ class RegisteredUserController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:'.User::class,
+            'email' => 'required|string|email|max:255|unique:' . User::class,
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
         $encryption = new EncryptionController();
         $keysResponse = $encryption->createKey();
-        
+
         $keys = $keysResponse->getData();
 
         $user = User::create([
@@ -52,10 +52,11 @@ class RegisteredUserController extends Controller
             'public_key' => $keys->publicKey,
             'private_key' => $keys->privateKey,
         ]);
-        
+
         event(new Registered($user));
 
         Auth::login($user);
 
+        return redirect(RouteServiceProvider::HOME);
     }
 }

@@ -27,15 +27,28 @@
                         Crear nuevo correo
                     </button>
                 </div>
-                <ul class="w-full [&>li]:py-1">
-                    <li class="flex items-center justify-center gap-2 font-semibold bg-indigo-200 rounded-r-xl">
+                <ul class="w-full [&>li]:py-1 cursor-pointer">
+                    <li 
+                        class="flex items-center gap-2 font-semibold px-4 py-2 rounded-r-xl transition-colors"
+                        :class="currentFolder === 'inbox' ? 'bg-indigo-200 text-indigo-900' : 'hover:bg-gray-200'"
+                        @click="switchFolder('inbox')"
+                    >
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-inbox"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 6a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2l0 -12" /><path d="M4 13h3l3 3h4l3 -3h3" /></svg>
                         Bandeja de entrada
+                    </li>
+                    <li 
+                        class="flex items-center gap-2 font-semibold px-4 py-2 rounded-r-xl transition-colors"
+                        :class="currentFolder === 'sent' ? 'bg-indigo-200 text-indigo-900' : 'hover:bg-gray-200'"
+                        @click="switchFolder('sent')"
+                    >
+                       <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-send"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10 14l11 -11" /><path d="M21 3l-6.5 18a.55 .55 0 0 1 -1 0l-3.5 -7l-7 -3.5a.55 .55 0 0 1 0 -1l18 -6.5" /></svg>
+                        Enviados
                     </li>
                 </ul>
             </aside>
             <main class="flex-1 max-h-full w-full bg-white rounded-xl m-2 overflow-auto">
-                <div class="p-4">
+                <div class="p-4 flex justify-between items-center">
+                    <h2 class="text-xl font-bold">{{ currentFolder === 'inbox' ? 'Recibidos' : 'Enviados' }}</h2>
                     <button 
                     :disabled="isLoading"
                     :class="isLoading ? 'text-gray-400 spinner' : 'text-gray-900'"
@@ -44,13 +57,22 @@
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 icon icon-tabler icons-tabler-outline icon-tabler-reload"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M19.933 13.041a8 8 0 1 1 -9.925 -8.788c3.899 -1 7.935 1.007 9.425 4.747" /><path d="M20 4v5h-5" /></svg>
                     </button>
                 </div>
-                <template v-for="(value, index) in dumpEmails" :key="index">
-                    <article class="grid grid-cols-[150px_1fr_100px] p-4 text-gray-900 text-sm border-b border-gray-300 hover:bg-gray-200 hover:cursor-pointer" @click="openEmail(value)">
-                        <h6 class="font-semibold">{{ value.subject }}</h6>
-                        <p class="text-gray-500">Haz clic para ver el contenido del mensaje...</p>
-                        <span class="font-semibold">{{value.timestamp}}</span>
-                    </article>
+                <template v-if="dumpEmails.length > 0">
+                    <template v-for="(value, index) in dumpEmails" :key="index">
+                        <article class="grid grid-cols-[150px_1fr_100px] p-4 text-gray-900 text-sm border-b border-gray-300 hover:bg-gray-200 hover:cursor-pointer" @click="openEmail(value)">
+                            <h6 class="font-semibold">{{ currentFolder === 'sent' ? 'Para: ' : 'De: ' }} {{ value.other_party }}</h6>
+                            <div class="flex flex-col">
+                                <span class="font-bold mb-1">{{ value.subject }}</span>
+                                <p class="text-gray-500 truncate">Haz clic para ver el contenido cifrado...</p>
+                            </div>
+                            <span class="font-semibold text-end">{{value.timestamp}}</span>
+                        </article>
+                    </template>
                 </template>
+                <div v-else-if="!isLoading" class="flex flex-col items-center justify-center h-full text-gray-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-mail-off mb-4"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 5h10a2 2 0 0 1 2 2v10m-2 2h-14a2 2 0 0 1 -2 -2v-10a2 2 0 0 1 2 -2" /><path d="M3 7l9 6l9 -6" /><path d="M3 3l18 18" /></svg>
+                    <p class="text-lg font-medium">No tienes mensajes {{ currentFolder === 'sent' ? 'enviados' : 'recibidos' }}</p>
+                </div>
             </main>
         </section>
     </div>
@@ -59,13 +81,14 @@
         <ContentEmail v-model="openModalEmail" :email="currentEmail" />
     </Transition>
     <Transition>
-        <CreateEmail v-model="openModalCreateEmail" />
+        <CreateEmail v-model="openModalCreateEmail" @message-sent="onMessageSent" />
     </Transition>
 </template>
 
 <script>
 import ContentEmail from './ContentEmail.vue';
 import CreateEmail from './CreateEmail.vue';
+import { ElNotification } from 'element-plus';
     export default {
         components: {
             ContentEmail,
@@ -79,35 +102,79 @@ import CreateEmail from './CreateEmail.vue';
             return {
                 search: '',
                 isLoading: false,
+                currentFolder: 'inbox', // 'inbox' | 'sent'
 
                 openModalEmail: false,
                 currentEmail: {},
 
                 openModalCreateEmail: false,
 
-                dumpEmails: [
-                    {
-                        subject: 'Apple support',
-                        content: 'Esto es el contenido dump del correo electrónico cifrado.',
-                        timestamp: '10:30 AM'
-                    },
-                    {
-                        subject: 'Google support',
-                        content: 'Esto es el contenido dump del correo electrónico cifrado.',
-                        timestamp: '10:30 AM'
-                    },
-                    {
-                        subject: 'Microsoft support',
-                        content: 'Esto es el contenido dump del correo electrónico cifrado.',
-                        timestamp: '10:30 AM'
-                    },
-                ]
+                dumpEmails: []
+            }
+        },
+        mounted() {
+            this.fetchEmails();
+
+            if (this.$page.props.auth.user) {
+                const userId = this.$page.props.auth.user.id;
+                
+                // Listener de Laravel Echo
+                window.Echo.private(`App.Models.User.${userId}`)
+                    .listen('MessageSent', (e) => {
+                        console.log("¡Evento recibido!", e.message);
+                        const msg = e.message;
+                        const isSentByMe = msg.sender_id === userId;
+                        const isReceivedByMe = msg.recipient_id === userId;
+
+                        // Si estoy en 'inbox' y recibo un correo -> agregarlo.
+                        // Si estoy en 'sent' y envié un correo -> agregarlo.
+                        
+                        if (isReceivedByMe) {
+                            ElNotification({
+                                title: 'Nuevo Mensaje',
+                                message: `De ${msg.sender ? msg.sender.email : 'Alguien'}: ${msg.subject}`,
+                                type: 'info',
+                                duration: 5000 
+                            });
+
+                            if (this.currentFolder === 'inbox') {
+                                this.addMessageToList(msg);
+                            }
+                        } else if (this.currentFolder === 'sent' && isSentByMe) {
+                             this.addMessageToList(msg);
+                        }
+                    });
             }
         },
         methods: {
+            switchFolder(folder) {
+                this.currentFolder = folder;
+                this.fetchEmails();
+            },
             async fetchEmails() {
                 this.isLoading = true;
-
+                this.dumpEmails = [];
+                try {
+                    const response = await axios.get('/messages', {
+                        params: { folder: this.currentFolder }
+                    });
+                    this.dumpEmails = response.data;
+                } catch (error) {
+                    console.error("Error cargando correos:", error);
+                } finally {
+                    this.isLoading = false;
+                }
+            },
+            addMessageToList(message) {
+                 this.dumpEmails.unshift({
+                    subject: message.subject,
+                    content: message.body, 
+                    timestamp: new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    id: message.id,
+                    sender_id: message.sender_id,
+                    other_party: this.currentFolder === 'sent' ? (message.recipient ? message.recipient.email : '...') : (message.sender ? message.sender.email : '...'),
+                    is_sent: message.sender_id === this.$page.props.auth.user.id
+                });
             },
             openEmail(email) {
                 this.openModalEmail = true;
@@ -115,6 +182,12 @@ import CreateEmail from './CreateEmail.vue';
             },
             openCreateEmail() {
                 this.openModalCreateEmail = true;
+            },
+            onMessageSent() {
+                if (this.currentFolder === 'sent') {
+                    this.fetchEmails();
+                } else {
+        
             }    
         }
     }
