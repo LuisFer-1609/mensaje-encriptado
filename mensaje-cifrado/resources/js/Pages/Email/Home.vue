@@ -2,9 +2,9 @@
     <div class="h-screen bg-gray-100">
         <header class="h-16 w-full flex items-center justify-between p-5">
 
-            <div class="flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-search"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 10a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" /><path d="M21 21l-6 -6" /></svg>
-                <el-input v-model="search" placeholder="Buscar correo"></el-input>
+            <div class="w-full max-w-[500px] flex items-center gap-2 bg-gray-200 rounded-full p-2 ps-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class=" text-gray-600 icon icon-tabler icons-tabler-outline icon-tabler-search"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 10a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" /><path d="M21 21l-6 -6" /></svg>
+                <el-input class="transparent-input text-white" v-model="search" placeholder="Buscar correo"></el-input>
             </div>
 
             <el-dropdown>
@@ -112,4 +112,24 @@ import ContentEmail from './ContentEmail.vue';
     .v-leave-to {
     opacity: 0;
     }
+</style>
+
+<style scoped>
+/* Target al contenedor interno de Element Plus */
+.transparent-input :deep(.el-input__wrapper) {
+  background-color: transparent !important;
+  box-shadow: none !important; /* Element Plus usa box-shadow en lugar de border */
+  border: none !important;
+  padding: 0; /* Opcional: si quieres eliminar el padding interno */
+}
+
+/* Opcional: Estilo cuando el input está enfocado */
+.transparent-input :deep(.el-input__wrapper.is-focus) {
+  box-shadow: none !important;
+}
+
+/* 2. Cambia el color del texto que se escribe */
+.transparent-input :deep(.el-input__inner) {
+  color: black !important;
+}
 </style>
