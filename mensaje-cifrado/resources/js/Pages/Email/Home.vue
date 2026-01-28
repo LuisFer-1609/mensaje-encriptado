@@ -1,5 +1,5 @@
 <template>
-    <div class="h-screen bg-gray-100">
+    <div class="flex flex-col min-h-screen bg-gray-100">
         <header class="h-16 w-full flex items-center justify-between p-5">
 
             <div class="w-full max-w-[500px] flex items-center gap-2 bg-gray-200 rounded-full p-2 ps-4">
@@ -19,13 +19,22 @@
                 </template>
             </el-dropdown>
         </header>
-        <section class="flex flex-row">
-            <aside class="p-5">
-                <ul>
-                    <li>Bandeja de entrada</li>
+        <section class="h-full flex flex-row">
+            <aside class="shrink-0 pe-3">
+                <div class="p-1 mb-5">
+                    <button class="flex items-center gap-2 bg-blue-200 rounded-xl p-5 font-semibold" @click="openCreateEmail">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-pencil"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" /><path d="M13.5 6.5l4 4" /></svg>
+                        Crear nuevo correo
+                    </button>
+                </div>
+                <ul class="w-full [&>li]:py-1">
+                    <li class="flex items-center justify-center gap-2 font-semibold bg-indigo-200 rounded-r-xl">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-inbox"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 6a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2l0 -12" /><path d="M4 13h3l3 3h4l3 -3h3" /></svg>
+                        Bandeja de entrada
+                    </li>
                 </ul>
             </aside>
-            <main class="h-full w-full bg-white rounded-xl">
+            <main class="flex-1 max-h-full w-full bg-white rounded-xl m-2 overflow-auto">
                 <div class="p-4">
                     <button 
                     :disabled="isLoading"
@@ -49,13 +58,18 @@
     <Transition>
         <ContentEmail v-model="openModalEmail" :email="currentEmail" />
     </Transition>
+    <Transition>
+        <CreateEmail v-model="openModalCreateEmail" />
+    </Transition>
 </template>
 
 <script>
 import ContentEmail from './ContentEmail.vue';
+import CreateEmail from './CreateEmail.vue';
     export default {
         components: {
             ContentEmail,
+            CreateEmail,
         },
         props: {
 
@@ -68,6 +82,9 @@ import ContentEmail from './ContentEmail.vue';
 
                 openModalEmail: false,
                 currentEmail: {},
+
+                openModalCreateEmail: false,
+
                 dumpEmails: [
                     {
                         subject: 'Apple support',
@@ -95,7 +112,10 @@ import ContentEmail from './ContentEmail.vue';
             openEmail(email) {
                 this.openModalEmail = true;
                 this.currentEmail = email;
-            }      
+            },
+            openCreateEmail() {
+                this.openModalCreateEmail = true;
+            }    
         }
     }
 </script>
