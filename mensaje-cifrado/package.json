@@ -17,6 +17,11 @@
         "lodash": "^4.17.19",
         "postcss": "^8.4.18",
         "tailwindcss": "^3.2.1",
+        "unplugin-auto-import": "^21.0.0",
+        "unplugin-vue-components": "^31.0.0",
         "vue": "^3.5.27"
+    },
+    "dependencies": {
+        "element-plus": "^2.13.1"
     }
 }
