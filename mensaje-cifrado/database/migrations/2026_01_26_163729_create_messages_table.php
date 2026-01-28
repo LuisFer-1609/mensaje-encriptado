@@ -11,13 +11,20 @@ return new class extends Migration
      *
      * @return void
      */
-    public function up()
-    {
-        Schema::create('messages', function (Blueprint $table) {
-            $table->id();
-            $table->timestamps();
-        });
-    }
+    public function up(): void
+{
+    Schema::create('messages', function (Blueprint $table) {
+        $table->id();
+        $table->foreignId('sender_id')->constrained('users')->onDelete('cascade');
+        $table->foreignId('recipient_id')->constrained('users')->onDelete('cascade');
+        $table->string('subject');
+        $table->longText('body'); 
+        // Estatus (ej: 'sent', 'delivered', 'read')
+        $table->string('status')->default('sent');
+        $table->softDeletes(); 
+        $table->timestamps();
+    });
+}
 
     /**
      * Reverse the migrations.
