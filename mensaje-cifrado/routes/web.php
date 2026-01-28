@@ -42,4 +42,9 @@ Route::middleware('auth')->group(function () {
 /*Ruta para mandar la incriptacion*/
 Route::get('/encriptar', [EncryptionController::class, 'createKey']);
 Route::post('/desencriptar', [EncryptionController::class, 'desencriptar']);
+
+use App\Http\Controllers\MessageController;
+Route::middleware('auth')->get('/messages', [MessageController::class, 'index'])->name('messages.index');
+Route::middleware('auth')->post('/messages', [MessageController::class, 'store'])->name('messages.store');
+Route::post('/check-email', [MessageController::class, 'checkEmail'])->name('check.email');
 require __DIR__ . '/auth.php';

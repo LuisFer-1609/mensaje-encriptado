@@ -14,7 +14,14 @@
         <form class="p-2">
             <div class="flex items-center gap-2 border-b-2 p-2">
                 <span class="text-sm">Para:</span>
-                <el-input class="transparent-input" v-model="form.to"></el-input>
+                <el-input class="transparent-input" v-model="form.to" @input="debouncedCheckEmail">
+                    <template #suffix>
+                        <el-icon v-if="emailStatus === 'validating'" class="is-loading"><Loading /></el-icon>
+                        <el-icon v-else-if="emailStatus === 'valid'" style="color: green"><Check /></el-icon>
+                        <el-icon v-else-if="emailStatus === 'invalid' || emailStatus === 'not-found'" style="color: red"><Close /></el-icon>
+                    </template>
+                </el-input>
+                <span v-if="emailStatus === 'not-found'" class="text-xs" style="color: red">No encontrado</span>
             </div>
             <div class="flex items-center gap-2 border-b-2 p-2">
                 <span class="text-sm">Asunto:</span>
@@ -32,13 +39,20 @@
             </div>
 
             <div class="flex items-center justify-end">
-                <el-button type="primary">Enviar</el-button>
+                <el-button type="primary" :loading="isLoading" @click.prevent="submitEmail">Enviar</el-button>
+            </div>
+            
+            <div v-if="errorMessage" class="fixed top-4 right-4 z-[9999] max-w-sm">
+                 <el-alert :title="errorMessage" type="error" show-icon />
             </div>
         </form>
     </section>
 </template>
 
 <script>
+import debounce from 'lodash/debounce';
+import { ElNotification } from 'element-plus';
+
 export default {
     props: {
         modelValue: {
@@ -50,6 +64,10 @@ export default {
         return {
             isLoading: false,
             isMinimized: false,
+            errorMessage: null,
+            
+            // Estado de validación del email
+            emailStatus: 'idle', // idle(En espera), validando, validado, invalidado, no-encontrado
 
             form: {
                 to: '',
@@ -58,11 +76,103 @@ export default {
             }
         }
     },
-    emits: ["update:modelValue"],
+    emits: ["update:modelValue", "message-sent"],
+    watch: {
+        'form.to': function() {
+            this.debouncedCheckEmail();
+        }
+    },
+    created() {
+        // Tiempo de espera
+        this.debouncedCheckEmail = debounce(this.checkEmail, 500);
+    },
     mounted() {
         this.isMinimized = false;
     },
     methods: {
+        async checkEmail() {
+            if (!this.form.to) {
+                this.emailStatus = 'idle';
+                return;
+            }
+            
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(this.form.to)) {
+                this.emailStatus = 'invalid';
+                return;
+            }
+
+            this.emailStatus = 'validating';
+
+            try {
+                const response = await axios.post('/check-email', { email: this.form.to });
+                if (response.data.exists) {
+                    this.emailStatus = 'Encontrado';
+                } else {
+                    this.emailStatus = 'No encontrado';
+                }
+            } catch (error) {
+                console.error("Error verificando email", error);
+                this.emailStatus = 'idle'; // O error
+            }
+        },
+
+        async submitEmail() {
+             this.isLoading = true;
+             this.errorMessage = null;
+             console.group("🚀 Enviando Correo (Simulación RSA)");
+             
+             const simulacionPublicKey = `-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAu1xvPFLxcAsOjB55aRYP
+h7S2kVAtX5baTYLmyJuVwgV40HJrXLfuGvQMxdvtlKrKbfrxd6opmI77Yrb4LYtq
+hrogQm1dBKLtPhO/OhFhkjmTHTNsa0nTSA3E6Poqv/6HOIJmKEFkddFHcr4D8125
+aMDTqGOxJsCbQwl8e5EY8AznAyyFdCBz3OjgxLLq/rgs3EsFOpRj9UsFGhDlxKDS
+MhyOeRZHlbuBtda+1agWCfNKiWi+9cCEw2NGh0Js44K6hz383+AhJVLK6DoyTodP
+7EE+aUVv+bCguTAHLREJa8LlZZn1FS0U+r+m5+xOdzAIy7NhHj1mlTqzq7ENcvD3
+wQIDAQAB
+-----END PUBLIC KEY-----`;
+
+            console.log("Mensaje Original:", this.form.message);
+
+            let payload = { ...this.form };
+            
+            if (window.encryptMessage) {
+                const encryptedBody = window.encryptMessage(this.form.message, simulacionPublicKey);
+                console.log("Mensaje cifrado:", encryptedBody);
+                
+                payload.message = encryptedBody;
+            } else {
+                console.error("Función window.encryptMessage no encontrada.");
+                return;
+            }
+            
+            try {
+                const response = await axios.post('/messages', payload);
+                
+                this.closeModal();
+                this.isLoading = false;
+                
+                this.$emit('message-sent');
+
+                // Notificacion de exito
+                ElNotification({
+                    title: '¡Éxito!',
+                    message: 'Correo enviado y guardado correctamente.',
+                    type: 'success',
+                });
+
+            } catch (error) {
+                console.error("Error al enviar:", error);
+                this.isLoading = false;
+                
+                if (error.response && error.response.status === 422) {
+                    const errors = error.response.data.errors;
+                    this.errorMessage = Object.values(errors).flat()[0];
+                } else {
+                    this.errorMessage = "Ocurrió un error inesperado al enviar el correo.";
+                }
+            }
+        },
         resetForm() {
             this.form = {
                 to: '',
