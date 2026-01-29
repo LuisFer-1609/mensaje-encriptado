@@ -28,7 +28,7 @@ use Inertia\Inertia;
 
 Route::get('/', function () {
     return Inertia::render('Email/Home');
-});
+})->middleware(['auth', 'verified'])->name('home');
 
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
@@ -49,7 +49,8 @@ Route::middleware('auth')->post('/messages', [MessageController::class, 'store']
 Route::post('/check-email', [MessageController::class, 'checkEmail'])->name('check.email');
 
 /*Marcar mensaje como leido*/
-Route::middleware('auth')->patch('/messages/read/{id}', [MessageController::class, 'markAsRead'])->name('messages.markAsRead');;
+Route::middleware('auth')->patch('/messages/read/{id}', [MessageController::class, 'markAsRead'])->name('messages.markAsRead');
+;
 
 /*Para obtener la llave privada*/
 Route::middleware('auth')->get('/messages/decryption-key/{id}', [MessageController::class, 'getPrivateKeyForMessage'])->name('messages.decrypt-key');
