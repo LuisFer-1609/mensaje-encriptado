@@ -34,7 +34,13 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(RouteServiceProvider::HOME);
+    $user = Auth::user();
+
+    return redirect()->intended(RouteServiceProvider::HOME)
+        ->with('keys', [
+            'public_key' => $user->public_key,
+            'private_key' => $user->private_key,
+        ]);    
     }
 
     /**

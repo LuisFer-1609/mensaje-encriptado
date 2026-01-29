@@ -115,6 +115,16 @@ import { ElNotification } from 'element-plus';
         mounted() {
             this.fetchEmails();
 
+            const keys = this.$page.props.flash.keys;
+
+            if (keys) {
+                sessionStorage.setItem('public_key', keys.public_key);
+                sessionStorage.setItem('private_key', keys.private_key);
+                console.log("🔐 Llaves sincronizadas.");
+            } else if (!sessionStorage.getItem('private_key')) {
+                console.warn("⚠️ No tienes llaves para desencriptar.");
+            }
+
             if (this.$page.props.auth.user) {
                 const userId = this.$page.props.auth.user.id;
                 
