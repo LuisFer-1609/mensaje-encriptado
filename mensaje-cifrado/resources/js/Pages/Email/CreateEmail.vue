@@ -107,16 +107,15 @@ export default {
 
             try {
                 const response = await axios.post('/check-email', { email: this.form.to });
-                if (response.data.exists) {
-                    this.emailStatus = 'Encontrado';
-                    this.recipientPublicKey = response.data.public_key;
-                } else {
-                    this.emailStatus = 'No encontrado';
-                    this.recipientPublicKey = null;
-                }
+
+                this.emailStatus = 'valid'; 
+                this.recipientPublicKey = response.data.public_key;
+
+                console.log(this.recipientPublicKey);
+
             } catch (error) {
                 console.error("Error verificando email", error);
-                this.emailStatus = 'idle'; // O error
+                this.emailStatus = 'not-found'; 
                 this.recipientPublicKey = null;
             }
         },

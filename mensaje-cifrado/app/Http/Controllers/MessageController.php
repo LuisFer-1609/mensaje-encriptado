@@ -104,8 +104,9 @@ class MessageController extends Controller
         ]);
     }
 
-    public function checkEmail(Request $request)
+   public function checkEmail(Request $request)
     {
+        // Validamos que el formato sea de correo
         $request->validate(['email' => 'required|email']);
 
         $user = User::where('email', $request->email)->first();
@@ -113,13 +114,16 @@ class MessageController extends Controller
         if ($user) {
             return response()->json([
                 'exists' => true,
-                'public_key' => $user->public_key
+                'public_key' => $user->public_key,
+                'status' => 'valid'
             ]);
         }
 
-        return response()->json(['exists' => false]);
+        return response()->json([
+            'exists' => false,
+            'status' => 'not-found'
+        ]);
     }
-
     public function markAsRead($id)
     {
         // Buscamos el mensaje asegurándonos de que el usuario autenticado sea el destinatario
@@ -138,26 +142,6 @@ class MessageController extends Controller
         return response()->json([
             'message' => 'Mensaje marcado como leído.',
             'status' => $message->status
-        ]);
-    }
-
-    public function getPrivateKeyForMessage($id)
-    {
-        // 1. Buscamos el mensaje y validamos que el usuario logueado sea el RECEPTOR
-        $message = Message::where('id', $id)
-            ->where('recipient_id', auth()->id())
-            ->first();
-
-        if (!$message) {
-            return response()->json([
-                'error' => 'Acceso denegado. Este mensaje no te pertenece o no existe.'
-            ], 403);
-        }
-
-        // 2. Si la validación pasa, entregamos SU llave privada
-        return response()->json([
-            'private_key' => auth()->user()->private_key,
-            'message_id' => $message->id
         ]);
     }
 }

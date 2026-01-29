@@ -50,9 +50,6 @@ Route::post('/check-email', [MessageController::class, 'checkEmail'])->name('che
 
 /*Marcar mensaje como leido*/
 Route::middleware('auth')->patch('/messages/read/{id}', [MessageController::class, 'markAsRead'])->name('messages.markAsRead');
-;
 
-/*Para obtener la llave privada*/
-Route::middleware('auth')->get('/messages/decryption-key/{id}', [MessageController::class, 'getPrivateKeyForMessage'])->name('messages.decrypt-key');
 
 require __DIR__ . '/auth.php';

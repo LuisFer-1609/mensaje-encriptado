@@ -124,7 +124,7 @@ import debounce from 'lodash/debounce';
             if (keys) {
                 sessionStorage.setItem('public_key', keys.public_key);
                 sessionStorage.setItem('private_key', keys.private_key);
-                console.log("🔐 Llaves sincronizadas.");
+                console.log("🔐 Llaves sincronizadas.", keys.public_key);
             } else if (!sessionStorage.getItem('private_key')) {
                 console.warn("⚠️ No tienes llaves para desencriptar.");
             }
