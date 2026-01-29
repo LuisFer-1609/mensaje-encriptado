@@ -1,5 +1,5 @@
 <template>
-    <section v-if="modelValue" class="absolute bottom-0 right-10 w-96 max-w-96 bg-white shadow-xl overflow-hidden" :class="isMinimized ? 'h-10' : 'h-auto'">
+    <section v-if="modelValue" class="fixed inset-x-0 bottom-0 md:right-10 md:left-auto md:w-96 md:max-w-96 w-full bg-white shadow-2xl md:rounded-t-xl z-50 border-t border-gray-200" :class="isMinimized ? 'h-12' : 'h-[80vh] md:h-auto'">
         <header class="flex items-center justify-between h-10 bg-gray-200 p-3">
             <span class="text-sm font-semibold">Nuevo mensaje</span>
             <div class="flex flex-row gap-1">
@@ -11,8 +11,8 @@
                 </button>
             </div>
         </header>
-        <form class="p-2">
-            <div class="flex items-center gap-2 border-b-2 p-2">
+        <form class="p-2 flex flex-col h-[calc(100%-2.5rem)]">
+            <div class="flex items-center gap-2 border-b-2 p-2 shrink-0">
                 <span class="text-sm">Para:</span>
                 <el-input class="transparent-input" v-model="form.to" @input="debouncedCheckEmail">
                     <template #suffix>
@@ -23,22 +23,22 @@
                 </el-input>
                 <span v-if="emailStatus === 'not-found'" class="text-xs" style="color: red">No encontrado</span>
             </div>
-            <div class="flex items-center gap-2 border-b-2 p-2">
+            <div class="flex items-center gap-2 border-b-2 p-2 shrink-0">
                 <span class="text-sm">Asunto:</span>
                 <el-input class="transparent-input" v-model="form.subject"></el-input>
             </div>
-            <div class="p-2 h-60">
+            <div class="p-2 flex-1 min-h-0">
                 <el-input
                     type="textarea"
-                    :rows="10"
                     placeholder="Escribe tu mensaje aquí..."
                     v-model="form.message"
                     class="w-full h-full transparent-input"
+                    resize="none"
                 >
                 </el-input>
             </div>
 
-            <div class="flex items-center justify-end">
+            <div class="flex items-center justify-end shrink-0 p-2">
                 <el-button type="primary" :loading="isLoading" @click.prevent="submitEmail">Enviar</el-button>
             </div>
             
@@ -68,6 +68,7 @@ export default {
             
             // Estado de validación del email
             emailStatus: 'idle', // idle(En espera), validando, validado, invalidado, no-encontrado
+            recipientPublicKey: null,
 
             form: {
                 to: '',
@@ -108,39 +109,56 @@ export default {
                 const response = await axios.post('/check-email', { email: this.form.to });
                 if (response.data.exists) {
                     this.emailStatus = 'Encontrado';
+                    this.recipientPublicKey = response.data.public_key;
                 } else {
                     this.emailStatus = 'No encontrado';
+                    this.recipientPublicKey = null;
                 }
             } catch (error) {
                 console.error("Error verificando email", error);
                 this.emailStatus = 'idle'; // O error
+                this.recipientPublicKey = null;
             }
         },
 
         async submitEmail() {
              this.isLoading = true;
              this.errorMessage = null;
-             console.group("🚀 Enviando Correo (Simulación RSA)");
+
+             if (!this.recipientPublicKey) {
+                 this.errorMessage = "No se ha encontrado la llave pública del destinatario. Verifica el correo.";
+                 this.isLoading = false;
+                 return;
+             }
              
-             const simulacionPublicKey = `-----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAu1xvPFLxcAsOjB55aRYP
-h7S2kVAtX5baTYLmyJuVwgV40HJrXLfuGvQMxdvtlKrKbfrxd6opmI77Yrb4LYtq
-hrogQm1dBKLtPhO/OhFhkjmTHTNsa0nTSA3E6Poqv/6HOIJmKEFkddFHcr4D8125
-aMDTqGOxJsCbQwl8e5EY8AznAyyFdCBz3OjgxLLq/rgs3EsFOpRj9UsFGhDlxKDS
-MhyOeRZHlbuBtda+1agWCfNKiWi+9cCEw2NGh0Js44K6hz383+AhJVLK6DoyTodP
-7EE+aUVv+bCguTAHLREJa8LlZZn1FS0U+r+m5+xOdzAIy7NhHj1mlTqzq7ENcvD3
-wQIDAQAB
------END PUBLIC KEY-----`;
-
-            console.log("Mensaje Original:", this.form.message);
-
             let payload = { ...this.form };
             
             if (window.encryptMessage) {
-                const encryptedBody = window.encryptMessage(this.form.message, simulacionPublicKey);
-                console.log("Mensaje cifrado:", encryptedBody);
+                // 1. Encriptar para el destinatario
+                const encryptedForRecipient = window.encryptMessage(this.form.message, this.recipientPublicKey);
                 
-                payload.message = encryptedBody;
+                // 2. Encriptar para mí mismo (Remitente)
+                // Usamos la llave pública del usuario autenticado
+                const myPublicKey = this.$page.props.auth.user.public_key;
+                let encryptedForSender = null;
+
+                if (myPublicKey) {
+                    encryptedForSender = window.encryptMessage(this.form.message, myPublicKey);
+                } else {
+                    console.warn("No se encontró la llave pública del remitente (tu usuario). No podrás leer este mensaje en Enviados.");
+                    // Fallback: Si no hay llave propia, guardamos null o el mismo del recipient (aunque no servirá)
+                    // Preferimos guardar null o manejarlo. Para este caso, guardaremos encryptedForRecipient duplicado 
+                    // o un string vacío. Pero lo ideal es que siempre exista.
+                    encryptedForSender = encryptedForRecipient; 
+                }
+
+                // 3. Crear payload JSON
+                const payloadContent = JSON.stringify({
+                    recipient: encryptedForRecipient,
+                    sender: encryptedForSender
+                });
+
+                payload.message = payloadContent;
             } else {
                 console.error("Función window.encryptMessage no encontrada.");
                 return;

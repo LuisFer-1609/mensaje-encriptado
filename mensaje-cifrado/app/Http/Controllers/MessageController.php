@@ -17,19 +17,29 @@ class MessageController extends Controller
         $query = Message::query();
 
         $statusFilter = $request->query('status');
+        $search = $request->query('search');
 
-        if ($folder === 'sent') {
-            // Enviados: Filtro simple por mi ID como remitente
-            $query->where('sender_id', $userId);
+        if ($search) {
+            // Búsqueda global: Enviados O Recibidos que coincidan con el asunto
+            $query->where(function ($q) use ($userId) {
+                $q->where('sender_id', $userId)
+                    ->orWhere('recipient_id', $userId);
+            })->where('subject', 'like', "%{$search}%");
+        } else {
+            // Sin búsqueda: Filtrar por carpeta
+            if ($folder === 'sent') {
+                // Enviados: Filtro simple por mi ID como remitente
+                $query->where('sender_id', $userId);
             } else {
-            // Recibidos: Yo soy el destinatario
-            $query->where('recipient_id', $userId);
+                // Recibidos: Yo soy el destinatario
+                $query->where('recipient_id', $userId);
 
-            // FILTRO DE ESTATUS SOLO EN RECIBIDOS
-            if ($statusFilter === 'read') {
-                $query->where('status', 'read');
-            } elseif ($statusFilter === 'unread') {
-                $query->where('status', '!=', 'read');
+                // FILTRO DE ESTATUS SOLO EN RECIBIDOS
+                if ($statusFilter === 'read') {
+                    $query->where('status', 'read');
+                } elseif ($statusFilter === 'unread') {
+                    $query->where('status', '!=', 'read');
+                }
             }
         }
 
@@ -98,9 +108,16 @@ class MessageController extends Controller
     {
         $request->validate(['email' => 'required|email']);
 
-        $exists = User::where('email', $request->email)->exists();
+        $user = User::where('email', $request->email)->first();
 
-        return response()->json(['exists' => $exists]);
+        if ($user) {
+            return response()->json([
+                'exists' => true,
+                'public_key' => $user->public_key
+            ]);
+        }
+
+        return response()->json(['exists' => false]);
     }
 
     public function markAsRead($id)
@@ -125,22 +142,22 @@ class MessageController extends Controller
     }
 
     public function getPrivateKeyForMessage($id)
-{
-    // 1. Buscamos el mensaje y validamos que el usuario logueado sea el RECEPTOR
-    $message = Message::where('id', $id)
-        ->where('recipient_id', auth()->id())
-        ->first();
+    {
+        // 1. Buscamos el mensaje y validamos que el usuario logueado sea el RECEPTOR
+        $message = Message::where('id', $id)
+            ->where('recipient_id', auth()->id())
+            ->first();
 
-    if (!$message) {
+        if (!$message) {
+            return response()->json([
+                'error' => 'Acceso denegado. Este mensaje no te pertenece o no existe.'
+            ], 403);
+        }
+
+        // 2. Si la validación pasa, entregamos SU llave privada
         return response()->json([
-            'error' => 'Acceso denegado. Este mensaje no te pertenece o no existe.'
-        ], 403);
+            'private_key' => auth()->user()->private_key,
+            'message_id' => $message->id
+        ]);
     }
-
-    // 2. Si la validación pasa, entregamos SU llave privada
-    return response()->json([
-        'private_key' => auth()->user()->private_key,
-        'message_id' => $message->id 
-    ]);
-}
 }

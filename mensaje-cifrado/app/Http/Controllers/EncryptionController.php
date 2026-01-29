@@ -13,7 +13,7 @@ class EncryptionController extends Controller
         $key = RSA::createKey(2048);
 
         $privateKey = $key->toString('PKCS1');
-        $publicKey = $key->getPublicKey()->toString('PKCS1');
+        $publicKey = $key->getPublicKey()->toString('PKCS8');
 
         return response()->json([
             'publicKey' => $publicKey,

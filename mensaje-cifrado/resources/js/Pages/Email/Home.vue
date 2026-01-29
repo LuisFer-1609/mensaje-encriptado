@@ -7,29 +7,29 @@
                 <el-input class="transparent-input text-white" v-model="search" placeholder="Buscar correo"></el-input>
             </div>
 
-            <el-dropdown>
-                <div class="flex flex-col gap-2">
-                    <img class="w-8 h-8 rounded-full" :src="'img/user-default.png'" alt="Usuario por defecto">
-                </div>
+            <el-dropdown trigger="click">
+                <img class="w-8 h-8 rounded-full cursor-pointer" :src="'https://ui-avatars.com/api/?name=User&background=random'" alt="Usuario por defecto">
                 
                 <template #dropdown>
-                <el-dropdown-menu>
-                    <el-dropdown-item>Action 1</el-dropdown-item>
-                </el-dropdown-menu>
+                    <el-dropdown-menu>
+                        <el-dropdown-item class="font-bold" disabled>{{ $page.props.auth.user.email }}</el-dropdown-item>
+                        <el-dropdown-item divided @click="logout" class="text-red-500 font-semibold">Cerrar Sesión</el-dropdown-item>
+                    </el-dropdown-menu>
                 </template>
             </el-dropdown>
         </header>
-        <section class="flex-1 h-full flex flex-row">
-            <aside class="shrink-0 pe-3">
-                <div class="p-1 mb-5">
-                    <button class="flex items-center gap-2 bg-blue-200 rounded-xl p-5 font-semibold" @click="openCreateEmail">
+        <section class="flex-1 h-full flex flex-col md:flex-row overflow-hidden">
+            <aside class="shrink-0 pe-0 md:pe-3 w-full md:w-64 flex md:flex-col gap-2 md:gap-0 p-2 md:p-0 overflow-x-auto md:overflow-visible bg-white md:bg-transparent shadow-sm md:shadow-none z-10">
+                <div class="md:p-1 md:mb-5 shrink-0">
+                    <button class="flex items-center gap-2 bg-blue-200 rounded-xl p-3 md:p-5 font-semibold w-full whitespace-nowrap justify-center" @click="openCreateEmail">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-pencil"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" /><path d="M13.5 6.5l4 4" /></svg>
-                        Crear nuevo correo
+                        <span class="hidden md:inline">Crear nuevo correo</span>
+                        <span class="md:hidden">Redactar</span>
                     </button>
                 </div>
-                <ul class="w-full [&>li]:py-1 cursor-pointer">
+                <ul class="flex md:flex-col w-full [&>li]:py-1 cursor-pointer overflow-x-auto md:overflow-visible">
                     <li 
-                        class="flex items-center gap-2 font-semibold px-4 py-2 rounded-r-xl transition-colors"
+                        class="flex items-center gap-2 font-semibold px-4 py-2 rounded-xl md:rounded-l-none md:rounded-r-xl transition-colors whitespace-nowrap"
                         :class="currentFolder === 'inbox' ? 'bg-indigo-200 text-indigo-900' : 'hover:bg-gray-200'"
                         @click="switchFolder('inbox')"
                     >
@@ -37,7 +37,7 @@
                         Bandeja de entrada
                     </li>
                     <li 
-                        class="flex items-center gap-2 font-semibold px-4 py-2 rounded-r-xl transition-colors"
+                        class="flex items-center gap-2 font-semibold px-4 py-2 rounded-xl md:rounded-l-none md:rounded-r-xl transition-colors whitespace-nowrap"
                         :class="currentFolder === 'sent' ? 'bg-indigo-200 text-indigo-900' : 'hover:bg-gray-200'"
                         @click="switchFolder('sent')"
                     >
@@ -46,8 +46,8 @@
                     </li>
                 </ul>
             </aside>
-            <main class="flex-1 max-h-full w-full bg-white rounded-xl m-2 overflow-auto">
-                <div class="p-4 flex justify-between items-center">
+            <main class="flex-1 max-h-full w-full bg-white rounded-xl m-2 overflow-auto shadow-sm">
+                <div class="p-4 flex justify-between items-center bg-white sticky top-0 z-10 border-b">
                     <h2 class="text-xl font-bold">{{ currentFolder === 'inbox' ? 'Recibidos' : 'Enviados' }}</h2>
                     <button 
                     :disabled="isLoading"
@@ -59,17 +59,20 @@
                 </div>
                 <template v-if="dumpEmails.length > 0">
                     <template v-for="(value, index) in dumpEmails" :key="index">
-                        <article class="grid grid-cols-[150px_1fr_100px] p-4 text-gray-900 text-sm border-b border-gray-300 hover:bg-gray-200 hover:cursor-pointer" @click="openEmail(value)">
-                            <h6 class="font-semibold">{{ currentFolder === 'sent' ? 'Para: ' : 'De: ' }} {{ value.other_party }}</h6>
-                            <div class="flex flex-col">
-                                <span class="font-bold mb-1">{{ value.subject }}</span>
+                        <article class="grid grid-cols-1 md:grid-cols-[200px_1fr_100px] gap-2 md:gap-4 p-4 text-gray-900 text-sm border-b border-gray-300 hover:bg-gray-50 hover:cursor-pointer transition-colors" @click="openEmail(value)">
+                            <div class="flex justify-between items-center md:block">
+                                <h6 class="font-semibold truncate md:w-full">{{ currentFolder === 'sent' ? 'Para: ' : 'De: ' }} {{ value.other_party }}</h6>
+                                <span class="font-semibold text-xs md:hidden text-gray-500">{{value.timestamp}}</span>
+                            </div>
+                            <div class="flex flex-col min-w-0">
+                                <span class="font-bold mb-1 truncate">{{ value.subject }}</span>
                                 <p class="text-gray-500 truncate">Haz clic para ver el contenido cifrado...</p>
                             </div>
-                            <span class="font-semibold text-end">{{value.timestamp}}</span>
+                            <span class="font-semibold text-end hidden md:block">{{value.timestamp}}</span>
                         </article>
                     </template>
                 </template>
-                <div v-else-if="!isLoading" class="flex flex-col items-center justify-center h-full text-gray-500">
+                <div v-else-if="!isLoading" class="flex flex-col items-center justify-center h-64 text-gray-500">
                     <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-mail-off mb-4"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 5h10a2 2 0 0 1 2 2v10m-2 2h-14a2 2 0 0 1 -2 -2v-10a2 2 0 0 1 2 -2" /><path d="M3 7l9 6l9 -6" /><path d="M3 3l18 18" /></svg>
                     <p class="text-lg font-medium">No tienes mensajes {{ currentFolder === 'sent' ? 'enviados' : 'recibidos' }}</p>
                 </div>
@@ -78,7 +81,7 @@
     </div>
 
     <Transition>
-        <ContentEmail v-model="openModalEmail" :email="currentEmail" />
+        <ContentEmail v-model="openModalEmail" :email="currentEmail" :private-key="$page.props.auth.user.private_key" />
     </Transition>
     <Transition>
         <CreateEmail v-model="openModalCreateEmail" @message-sent="onMessageSent" />
@@ -89,6 +92,7 @@
 import ContentEmail from './ContentEmail.vue';
 import CreateEmail from './CreateEmail.vue';
 import { ElNotification } from 'element-plus';
+import debounce from 'lodash/debounce';
     export default {
         components: {
             ContentEmail,
@@ -146,19 +150,33 @@ import { ElNotification } from 'element-plus';
                     });
             }
         },
-        methods: {
-            switchFolder(folder) {
-                this.currentFolder = folder;
-                this.fetchEmails();
+            watch: {
+                search: debounce(function(val) {
+                    this.fetchEmails();
+                }, 500)
             },
-            async fetchEmails() {
-                this.isLoading = true;
-                this.dumpEmails = [];
-                try {
-                    const response = await axios.get('/messages', {
-                        params: { folder: this.currentFolder }
-                    });
-                    this.dumpEmails = response.data;
+            methods: {
+                logout() {
+                    this.$inertia.post(route('logout'));
+                },
+                switchFolder(folder) {
+                    this.currentFolder = folder;
+                    this.fetchEmails();
+                },
+                async fetchEmails() {
+                    this.isLoading = true;
+                    this.dumpEmails = [];
+                    try {
+                        const response = await axios.get('/messages', {
+                            params: { 
+                                folder: this.currentFolder,
+                                search: this.search 
+                            }
+                        });
+                    this.dumpEmails = response.data.map(email => ({
+                        ...email,
+                        content: email.body // Mapear el contenido del body
+                    }));
                 } catch (error) {
                     console.error("Error cargando correos:", error);
                 } finally {
