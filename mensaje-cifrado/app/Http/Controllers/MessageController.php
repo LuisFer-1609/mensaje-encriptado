@@ -16,12 +16,21 @@ class MessageController extends Controller
 
         $query = Message::query();
 
+        $statusFilter = $request->query('status');
+
         if ($folder === 'sent') {
-            // Enviados: Yo soy el sender
+            // Enviados: Filtro simple por mi ID como remitente
             $query->where('sender_id', $userId);
-        } else {
-            // Recibidos: Yo soy el recipient
+            } else {
+            // Recibidos: Yo soy el destinatario
             $query->where('recipient_id', $userId);
+
+            // FILTRO DE ESTATUS SOLO EN RECIBIDOS
+            if ($statusFilter === 'read') {
+                $query->where('status', 'read');
+            } elseif ($statusFilter === 'unread') {
+                $query->where('status', '!=', 'read');
+            }
         }
 
         $messages = $query->with(['sender', 'recipient'])
@@ -93,4 +102,45 @@ class MessageController extends Controller
 
         return response()->json(['exists' => $exists]);
     }
+
+    public function markAsRead($id)
+    {
+        // Buscamos el mensaje asegurándonos de que el usuario autenticado sea el destinatario
+        $message = Message::where('id', $id)
+            ->where('recipient_id', auth()->id())
+            ->first();
+
+        if (!$message) {
+            return response()->json([
+                'error' => 'No tienes permiso para marcar este mensaje o no existe.'
+            ], 403);
+        }
+
+        $message->update(['status' => 'read']);
+
+        return response()->json([
+            'message' => 'Mensaje marcado como leído.',
+            'status' => $message->status
+        ]);
+    }
+
+    public function getPrivateKeyForMessage($id)
+{
+    // 1. Buscamos el mensaje y validamos que el usuario logueado sea el RECEPTOR
+    $message = Message::where('id', $id)
+        ->where('recipient_id', auth()->id())
+        ->first();
+
+    if (!$message) {
+        return response()->json([
+            'error' => 'Acceso denegado. Este mensaje no te pertenece o no existe.'
+        ], 403);
+    }
+
+    // 2. Si la validación pasa, entregamos SU llave privada
+    return response()->json([
+        'private_key' => auth()->user()->private_key,
+        'message_id' => $message->id 
+    ]);
+}
 }

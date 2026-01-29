@@ -16,6 +16,7 @@ use App\Http\Controllers\Auth\RegisteredUserController;
 |
 */
 
+
 Route::post('register', [RegisteredUserController::class, 'store']);
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
