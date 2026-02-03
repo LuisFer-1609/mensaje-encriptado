@@ -59,16 +59,38 @@
                 </div>
                 <template v-if="dumpEmails.length > 0">
                     <template v-for="(value, index) in dumpEmails" :key="index">
-                        <article class="grid grid-cols-1 md:grid-cols-[200px_1fr_100px] gap-2 md:gap-4 p-4 text-gray-900 text-sm border-b border-gray-300 hover:bg-gray-50 hover:cursor-pointer transition-colors" @click="openEmail(value)">
+                        <article 
+                            class="grid grid-cols-1 md:grid-cols-[200px_1fr_100px] gap-2 md:gap-4 p-4 text-sm border-b border-gray-200 hover:cursor-pointer transition-colors duration-200"
+                            :class="[
+                                // Si ya está leído: Fondo grisáceo y texto normal
+                                value.status === 'read' 
+                                    ? 'bg-gray-100 text-gray-600 font-normal' 
+                                    // Si NO está leído: Fondo blanco puro y texto negrita
+                                    : 'bg-white text-gray-900 font-bold border-l-4 border-l-blue-500 shadow-sm' 
+                            ]"
+                            @click="openEmail(value)"
+                        >
                             <div class="flex justify-between items-center md:block">
-                                <h6 class="font-semibold truncate md:w-full">{{ currentFolder === 'sent' ? 'Para: ' : 'De: ' }} {{ value.other_party }}</h6>
-                                <span class="font-semibold text-xs md:hidden text-gray-500">{{value.timestamp}}</span>
+                                <h6 class="truncate md:w-full" :class="value.status !== 'read' ? 'text-black' : ''">
+                                    {{ currentFolder === 'sent' ? 'Para: ' : 'De: ' }} {{ value.other_party }}
+                                </h6>
+                                <span class="text-xs md:hidden" :class="value.status !== 'read' ? 'text-blue-600' : 'text-gray-500'">
+                                    {{value.timestamp}}
+                                </span>
                             </div>
+                            
                             <div class="flex flex-col min-w-0">
-                                <span class="font-bold mb-1 truncate">{{ value.subject }}</span>
-                                <p class="text-gray-500 truncate">Haz clic para ver el contenido cifrado...</p>
+                                <span class="mb-1 truncate" :class="value.status !== 'read' ? 'text-black' : ''">
+                                    {{ value.subject }}
+                                </span>
+                                <p class="truncate font-normal" :class="value.status !== 'read' ? 'text-gray-600' : 'text-gray-400'">
+                                    Haz clic para ver el contenido cifrado...
+                                </p>
                             </div>
-                            <span class="font-semibold text-end hidden md:block">{{value.timestamp}}</span>
+
+                            <span class="text-end hidden md:block" :class="value.status !== 'read' ? 'text-blue-600' : 'text-gray-500'">
+                                {{value.timestamp}}
+                            </span>
                         </article>
                     </template>
                 </template>
@@ -173,7 +195,7 @@ import debounce from 'lodash/debounce';
                     this.currentFolder = folder;
                     this.fetchEmails();
                 },
-                async fetchEmails() {
+               async fetchEmails() {
                     this.isLoading = true;
                     this.dumpEmails = [];
                     try {
@@ -183,30 +205,44 @@ import debounce from 'lodash/debounce';
                                 search: this.search 
                             }
                         });
-                    this.dumpEmails = response.data.map(email => ({
-                        ...email,
-                        content: email.body // Mapear el contenido del body
-                    }));
-                } catch (error) {
-                    console.error("Error cargando correos:", error);
-                } finally {
-                    this.isLoading = false;
-                }
-            },
+
+                        this.dumpEmails = response.data.map(email => ({
+                            ...email,
+                            content: email.body,
+                            timestamp: this.formatDate(email.created_at) 
+                        }));
+
+                    } catch (error) {
+                        console.error("Error cargando correos:", error);
+                    } finally {
+                        this.isLoading = false;
+                    }
+                },
             addMessageToList(message) {
                  this.dumpEmails.unshift({
                     subject: message.subject,
                     content: message.body, 
-                    timestamp: new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    timestamp: this.formatDate(message.created_at),
                     id: message.id,
                     sender_id: message.sender_id,
                     other_party: this.currentFolder === 'sent' ? (message.recipient ? message.recipient.email : '...') : (message.sender ? message.sender.email : '...'),
-                    is_sent: message.sender_id === this.$page.props.auth.user.id
+                    is_sent: message.sender_id === this.$page.props.auth.user.id,
+                    status: message.status || 'sent'
                 });
             },
-            openEmail(email) {
+            async openEmail(email) {
                 this.openModalEmail = true;
                 this.currentEmail = email;
+
+                if (this.currentFolder === 'inbox' && email.status !== 'read') {
+                    email.status = 'read';
+                    try {
+                        await axios.patch(route('messages.markAsRead', email.id));
+                    } catch (error) {
+                        console.error("Error marcando como leído:", error);
+                        email.status = 'sent'; 
+                    }
+                }
             },
             openCreateEmail() {
                 this.openModalCreateEmail = true;
@@ -215,7 +251,31 @@ import debounce from 'lodash/debounce';
                 if (this.currentFolder === 'sent') {
                     this.fetchEmails();
                 }
-            }    
+            },
+            formatDate(dateString) {
+                const date = new Date(dateString);
+                const now = new Date();
+
+                // 1. Verificar si es HOY
+                if (date.toDateString() === now.toDateString()) {
+                    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                }
+
+                // 2. Verificar si fue AYER
+                const yesterday = new Date(now);
+                yesterday.setDate(now.getDate() - 1);
+                
+                if (date.toDateString() === yesterday.toDateString()) {
+                    return 'Ayer';
+                }
+
+                // 3. Cualquier otra fecha (Día/Mes/Año)
+                return date.toLocaleDateString('es-ES', { 
+                    day: '2-digit', 
+                    month: '2-digit', 
+                    year: 'numeric' 
+                }); 
+            }
         }
     }
 </script>

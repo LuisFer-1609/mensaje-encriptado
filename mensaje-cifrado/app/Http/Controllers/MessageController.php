@@ -55,6 +55,7 @@ class MessageController extends Controller
                     'is_sent' => $message->sender_id === $userId,
                     'is_received' => $message->recipient_id === $userId,
                     'other_party' => $message->sender_id === $userId ? ($message->recipient ? $message->recipient->email : 'Desconocido') : ($message->sender ? $message->sender->email : 'Desconocido'),
+                    'status' => $message->status
                 ];
             });
 
@@ -144,4 +145,21 @@ class MessageController extends Controller
             'status' => $message->status
         ]);
     }
+
+    public function emailsfind(Request $request)
+    {
+        $search = $request->input('query'); 
+        
+        if (!$search) return response()->json([]);
+
+        $result = User::where('email', 'LIKE', '%' . $search . '%')
+                    ->limit(5)
+                    ->get(['id', 'email']);
+
+        return response()->json([
+            'success' => true, 
+            'data' => $result
+        ]);
+    }
+        
 }

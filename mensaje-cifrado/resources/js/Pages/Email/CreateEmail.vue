@@ -12,16 +12,32 @@
             </div>
         </header>
         <form class="p-2 flex flex-col h-[calc(100%-2.5rem)]">
-            <div class="flex items-center gap-2 border-b-2 p-2 shrink-0">
+           <div class="flex items-center gap-2 border-b-2 p-2 shrink-0">
                 <span class="text-sm">Para:</span>
-                <el-input class="transparent-input" v-model="form.to" @input="debouncedCheckEmail">
+                
+                <el-autocomplete
+                    v-model="form.to"
+                    :fetch-suggestions="querySearchAsync"
+                    placeholder="Buscar usuario..."
+                    class="transparent-input w-full"
+                    :trigger-on-focus="false"
+                    @select="handleSelect"
+                    clearable
+                >
                     <template #suffix>
                         <el-icon v-if="emailStatus === 'validating'" class="is-loading"><Loading /></el-icon>
                         <el-icon v-else-if="emailStatus === 'valid'" style="color: green"><Check /></el-icon>
                         <el-icon v-else-if="emailStatus === 'invalid' || emailStatus === 'not-found'" style="color: red"><Close /></el-icon>
                     </template>
-                </el-input>
-                <span v-if="emailStatus === 'not-found'" class="text-xs" style="color: red">No encontrado</span>
+                    
+                    <template #default="{ item }">
+                        <div class="flex flex-col leading-tight py-1">
+                            <span class="font-bold text-gray-800">{{ item.email }}</span>
+                            </div>
+                    </template>
+                </el-autocomplete>
+
+                <span v-if="emailStatus === 'not-found'" class="text-xs shrink-0" style="color: red">No encontrado</span>
             </div>
             <div class="flex items-center gap-2 border-b-2 p-2 shrink-0">
                 <span class="text-sm">Asunto:</span>
@@ -78,29 +94,49 @@ export default {
         }
     },
     emits: ["update:modelValue", "message-sent"],
-    watch: {
-        'form.to': function() {
-            this.debouncedCheckEmail();
-        }
-    },
-    created() {
-        // Tiempo de espera
-        this.debouncedCheckEmail = debounce(this.checkEmail, 500);
-    },
     mounted() {
         this.isMinimized = false;
     },
     methods: {
+        async querySearchAsync(queryString, cb) {
+            if (!queryString || queryString.length < 2) {
+                cb([]);
+                return;
+            }
+
+            try {
+                const response = await axios.get(route('emails.find'), { 
+                    params: { query: queryString } 
+                });
+                
+                const results = response.data.data.map(user => ({
+                    value: user.email, 
+                    ...user
+                }));
+                
+                cb(results);
+            } catch (error) {
+                console.error("Error buscando correos:", error);
+                cb([]);
+            }
+        },
+
+        handleSelect(item) {
+            this.form.to = item.value;
+            this.emailStatus = 'idle';
+        },
+
         async checkEmail() {
             if (!this.form.to) {
                 this.emailStatus = 'idle';
-                return;
+                return false;
             }
             
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!emailRegex.test(this.form.to)) {
                 this.emailStatus = 'invalid';
-                return;
+                this.errorMessage = "Formato de correo inválido.";
+                return false;
             }
 
             this.emailStatus = 'validating';
@@ -110,13 +146,14 @@ export default {
 
                 this.emailStatus = 'valid'; 
                 this.recipientPublicKey = response.data.public_key;
-
-                console.log(this.recipientPublicKey);
+                return true; 
 
             } catch (error) {
                 console.error("Error verificando email", error);
                 this.emailStatus = 'not-found'; 
                 this.recipientPublicKey = null;
+                this.errorMessage = "El usuario no existe o no tiene llaves configuradas.";
+                return false; 
             }
         },
 
@@ -124,70 +161,71 @@ export default {
              this.isLoading = true;
              this.errorMessage = null;
 
-             if (!this.recipientPublicKey) {
-                 this.errorMessage = "No se ha encontrado la llave pública del destinatario. Verifica el correo.";
+             // Validar el correo antes de hacer nada
+             const isEmailValid = await this.checkEmail();
+
+             if (!isEmailValid) {
                  this.isLoading = false;
-                 return;
+                 return; 
              }
              
             let payload = { ...this.form };
             
             if (window.encryptMessage) {
-                // 1. Encriptar para el destinatario
-                const encryptedForRecipient = window.encryptMessage(this.form.message, this.recipientPublicKey);
-                
-                // 2. Encriptar para mí mismo (Remitente)
-                // Usamos la llave pública del usuario autenticado
-                const myPublicKey = this.$page.props.auth.user.public_key;
-                let encryptedForSender = null;
+                try {
+                    // Encriptar para el destinatario
+                    const encryptedForRecipient = window.encryptMessage(this.form.message, this.recipientPublicKey);
+                    
+                    // Encriptar para mí (Remitente)
+                    const myPublicKey = this.$page.props.auth.user.public_key;
+                    let encryptedForSender = null;
 
-                if (myPublicKey) {
-                    encryptedForSender = window.encryptMessage(this.form.message, myPublicKey);
-                } else {
-                    console.warn("No se encontró la llave pública del remitente (tu usuario). No podrás leer este mensaje en Enviados.");
-                    // Fallback: Si no hay llave propia, guardamos null o el mismo del recipient (aunque no servirá)
-                    // Preferimos guardar null o manejarlo. Para este caso, guardaremos encryptedForRecipient duplicado 
-                    // o un string vacío. Pero lo ideal es que siempre exista.
-                    encryptedForSender = encryptedForRecipient; 
+                    if (myPublicKey) {
+                        encryptedForSender = window.encryptMessage(this.form.message, myPublicKey);
+                    } else {
+                        encryptedForSender = encryptedForRecipient; 
+                    }
+
+                    const payloadContent = JSON.stringify({
+                        recipient: encryptedForRecipient,
+                        sender: encryptedForSender
+                    });
+
+                    payload.message = payloadContent;
+
+                } catch (encryptError) {
+                    this.errorMessage = "Error al encriptar: " + encryptError.message;
+                    this.isLoading = false;
+                    return;
                 }
-
-                // 3. Crear payload JSON
-                const payloadContent = JSON.stringify({
-                    recipient: encryptedForRecipient,
-                    sender: encryptedForSender
-                });
-
-                payload.message = payloadContent;
             } else {
-                console.error("Función window.encryptMessage no encontrada.");
+                this.errorMessage = "Error crítico: Librería de encriptación no cargada.";
+                this.isLoading = false;
                 return;
             }
             
             try {
-                const response = await axios.post('/messages', payload);
+                await axios.post('/messages', payload);
                 
-                this.closeModal();
-                this.isLoading = false;
-                
+                this.closeModal(); // Esto también resetea el form
                 this.$emit('message-sent');
 
-                // Notificacion de exito
                 ElNotification({
-                    title: '¡Éxito!',
-                    message: 'Correo enviado y guardado correctamente.',
+                    title: '¡Enviado!',
+                    message: 'Mensaje seguro enviado correctamente.',
                     type: 'success',
                 });
 
             } catch (error) {
                 console.error("Error al enviar:", error);
-                this.isLoading = false;
-                
                 if (error.response && error.response.status === 422) {
                     const errors = error.response.data.errors;
                     this.errorMessage = Object.values(errors).flat()[0];
                 } else {
-                    this.errorMessage = "Ocurrió un error inesperado al enviar el correo.";
+                    this.errorMessage = "Ocurrió un error inesperado al enviar.";
                 }
+            } finally {
+                this.isLoading = false;
             }
         },
         resetForm() {
